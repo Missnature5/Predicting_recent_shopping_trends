@@ -1,0 +1,44 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.linear_model import LinearRegression
+
+# Load the data
+data = pd.read_csv("/content/shopping_trends.csv")
+
+# Create a LabelEncoder
+label_encoder = LabelEncoder()
+
+# Fit the LabelEncoder on the ENTIRE 'Season' column
+label_encoder.fit(data['Season'])  # This is the crucial change
+
+# Transform the 'Season' column to numerical values
+data['season_encoded'] = label_encoder.transform(data['Season'])
+
+# Split the data into training and testing sets
+X = data[['season_encoded', 'Purchase Amount (USD)']]
+y = data['Review Rating']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42) # Example split
+
+# Create and train the model (example using Linear Regression)
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Now, you can safely predict for each season
+season_categories = {}
+for season in data['Season'].unique():
+    season_code = label_encoder.transform([season])[0]  # Now, 'Winter' should be encoded correctly
+    season_data = data[data['season_encoded'] == season_code]
+    season_predictions = model.predict(season_data[['season_encoded', 'Purchase Amount (USD)']])
+    season_categories[season] = season_predictions
+# Plot a graph to visualize predictions
+plt.figure(figsize=(10, 6))
+# Get the average prediction for each season
+average_predictions = [np.mean(predictions) for predictions in season_categories.values()]
+# No need to encode the predictions
+plt.bar(season_categories.keys(), average_predictions, color='skyblue')
+plt.title('Average Predicted Review Rating for Each Season')
+plt.xlabel('Season')
+plt.ylabel('Average Predicted Review Rating')
+plt.xticks(rotation=45)
+plt.show()
